@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "vm.h"
+#include "pinfo.h"
 
 uint64
 sys_exit(void)
@@ -106,4 +107,73 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+extern struct proc proc[];
+
+uint64
+sys_getinfo(void)
+{
+  uint64 addr;
+  struct pinfo info;
+  struct proc *p;
+  int i = 0;
+
+  argaddr(0, &addr);
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state != UNUSED){
+      info.pid[i] = p->pid;
+      info.status[i] = p->state;
+      info.priority[i] = p->priority;
+      info.tickets[i] = p->tickets;
+      i++;
+    }
+    release(&p->lock);
+  }
+  info.num_processes = i;
+
+  if(copyout(myproc()->pagetable, addr, (char *)&info, sizeof(info)) < 0)
+    return -1;
+
+  return 0;
+}
+
+uint64
+sys_setpriority(void)
+{
+  int pid, priority;
+  struct proc *p;
+  int found = 0;
+  int old_priority = -1;
+
+  argint(0, &pid);
+  argint(1, &priority);
+
+  if(priority < 0 || priority > 100) {
+    return -1;
+  }
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid && p->state != UNUSED){
+      old_priority = p->priority;
+      p->priority = priority;
+      found = 1;
+      release(&p->lock);
+      break;
+    }
+    release(&p->lock);
+  }
+
+  if(!found) {
+    return -1;
+  }
+
+  if(priority < old_priority){
+    yield();
+  }
+
+  return 0;
 }
