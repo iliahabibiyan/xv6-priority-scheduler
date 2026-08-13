@@ -33,12 +33,12 @@ Requires the RISC-V toolchain (`riscv64-unknown-elf-` or `riscv64-linux-gnu-`) a
 ### Commands
 * **Run with Priority Scheduler:**
   ```bash
-  make qemu SCHEDULER=PRIORITY
+  make qemu SCHEDULER=PRIORITY CPUS=1
   ```
 
 * **Run with Default Scheduler:**
   ```bash
-  make qemu SCHEDULER=DEFAULT
+  make qemu SCHEDULER=DEFAULT CPUS=1
   ```
 
 ---
